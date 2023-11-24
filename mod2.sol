@@ -1,29 +1,72 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts@4.9/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts@4.9/access/Ownable.sol";
+//import "hardhat/console.sol";
 
-contract micko is ERC20, Ownable {
-    event Mint(address indexed to, uint256 amount);
-    event Burn(address indexed from, uint256 amount);
+contract Assessment {
+    address payable public owner;
+    uint256 public balance;
 
-    constructor(string memory name, string memory symbol) ERC20(name, symbol) {
+    event Deposit(uint256 amount);
+    event Withdraw(uint256 amount);
+
+    constructor(uint initBalance) payable {
+        owner = payable(msg.sender);
+        balance = initBalance;
     }
 
-    function mint(address to, uint256 amount) external onlyOwner {
-        _mint(to, amount);
-        emit Mint(to, amount);
+    function getBalance() public view returns(uint256){
+        return balance;
     }
 
-    function burn(uint256 amount) external {
-        _burn(_msgSender(), amount);
-        emit Burn(_msgSender(), amount);
+    function deposit(uint256 _amount) public payable {
+        uint _previousBalance = balance;
+
+        // make sure this is the owner
+        require(msg.sender == owner, "You are not the owner of this account");
+
+        // perform transaction
+        balance += _amount;
+
+        // assert transaction completed successfully
+        assert(balance == _previousBalance + _amount);
+
+        // emit the event
+        emit Deposit(_amount);
     }
 
-    function transfer(address to, uint256 amount) public override returns (bool) {
-        require(to != address(this), "Cannot transfer to the token contract");
-        _transfer(_msgSender(), to, amount);
-        return true;
+    // custom error
+    error InsufficientBalance(uint256 balance, uint256 withdrawAmount);
+
+    function withdraw(uint256 _withdrawAmount) public {
+        require(msg.sender == owner, "You are not the owner of this account");
+        uint _previousBalance = balance;
+        if (balance < _withdrawAmount) {
+            revert InsufficientBalance({
+                balance: balance,
+                withdrawAmount: _withdrawAmount
+            });
+        }
+
+        // withdraw the given amount
+        balance -= _withdrawAmount;
+
+        // assert the balance is correct
+        assert(balance == (_previousBalance - _withdrawAmount));
+
+        // emit the event
+        emit Withdraw(_withdrawAmount);
     }
+    
+    function doubleBalance(uint256 _doubleAmount) public onlyOwner {
+    uint256 _previousBalance = balance;
+
+    require(_doubleAmount > 0, "Invalid double amount");
+
+    balance *= _doubleAmount;
+
+    assert(balance == _previousBalance * _doubleAmount);
+
+    emit DoubleBalance(_doubleAmount);
+}
 }
